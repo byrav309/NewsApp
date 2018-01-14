@@ -1,5 +1,9 @@
 package com.exmample.android.newsapp;
 
+import android.content.Intent;
+import android.net.Uri;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DefaultItemAnimator;
@@ -15,11 +19,12 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements NewsFetchResultCallBack {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<NewsDetails>>, CustomItemClickListener {
 
     private NewsAdapter newsAdapter;
     private TextView syncErrorTextView;
     private boolean isSyncInProgress;
+    private final int LOADER_ID = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements NewsFetchResultCa
         recyclerView.setLayoutManager(mLayoutManager);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         recyclerView.setAdapter(newsAdapter);
-        syncNews();
+        getSupportLoaderManager().initLoader(LOADER_ID, null, this);
     }
 
     @Override
@@ -48,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements NewsFetchResultCa
         switch (item.getItemId()) {
             case R.id.menu_sync:
                 if (!isSyncInProgress)
-                    syncNews();
+                    getSupportLoaderManager().restartLoader(LOADER_ID, null, this);
                 break;
             default:
                 super.onOptionsItemSelected(item);
@@ -56,10 +61,23 @@ public class MainActivity extends AppCompatActivity implements NewsFetchResultCa
         return true;
     }
 
-    private void syncNews() {
+    @Override
+    public Loader<List<NewsDetails>> onCreateLoader(int id, Bundle args) {
         isSyncInProgress = true;
-        showToastMessage(R.string.sync_started);
-        new NewsFetchTask(this).execute();
+        return new NewsAsyncLoader(this);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<List<NewsDetails>> loader, List<NewsDetails> data) {
+        isSyncInProgress = false;
+        if (data.size() <= 0) {
+            showToastMessage(R.string.sync_error);
+            syncErrorTextView.setVisibility(View.VISIBLE);
+            return;
+        }
+        showToastMessage(R.string.sync_complete);
+        syncErrorTextView.setVisibility(View.GONE);
+        newsAdapter.setItems(data);
     }
 
     private void showToastMessage(int resourceId) {
@@ -67,15 +85,14 @@ public class MainActivity extends AppCompatActivity implements NewsFetchResultCa
     }
 
     @Override
-    public void onResult(List<NewsDetails> newsItems) {
-        isSyncInProgress = false;
-        if (newsItems.size() <= 0) {
-            showToastMessage(R.string.sync_error);
-            syncErrorTextView.setVisibility(View.VISIBLE);
-            return;
-        }
-        showToastMessage(R.string.sync_complete);
-        syncErrorTextView.setVisibility(View.GONE);
-        newsAdapter.setItems(newsItems);
+    public void onLoaderReset(Loader<List<NewsDetails>> loader) {
+
+    }
+
+    @Override
+    public void onItemClick(NewsDetails newsDetails) {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(newsDetails.getWebUrl()));
+        startActivity(intent);
     }
 }

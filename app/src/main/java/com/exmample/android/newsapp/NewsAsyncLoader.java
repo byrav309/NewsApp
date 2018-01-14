@@ -1,7 +1,9 @@
 package com.exmample.android.newsapp;
 
+import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.support.v4.content.AsyncTaskLoader;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -23,20 +25,24 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class NewsFetchTask extends AsyncTask<Void, Void, List<NewsDetails>> {
+public class NewsAsyncLoader extends AsyncTaskLoader<List<NewsDetails>> {
 
     private final int READ_TIMEOUT_TIME = 5000;
     private final int CONNECTION_TIMEOUT_TIME = 5000;
-    private NewsFetchResultCallBack resultCallBack;
     private final String TAG = getClass().getName();
 
-
-    public NewsFetchTask(NewsFetchResultCallBack resultCallBack) {
-        this.resultCallBack = resultCallBack;
+    public NewsAsyncLoader(Context context) {
+        super(context);
     }
 
     @Override
-    protected List<NewsDetails> doInBackground(Void... params) {
+    protected void onStartLoading() {
+        super.onStartLoading();
+        forceLoad();
+    }
+
+    @Override
+    public List<NewsDetails> loadInBackground() {
         URL url = createStringUrl();
         String jsonResponse = "";
         try {
@@ -59,6 +65,7 @@ public class NewsFetchTask extends AsyncTask<Void, Void, List<NewsDetails>> {
                 JSONObject oneResult = resultsArray.getJSONObject(i);
                 String title = oneResult.getString("webTitle");
                 String date = oneResult.getString("webPublicationDate");
+                String webUrl = oneResult.getString("webUrl");
                 date = formatDate(date);
                 String section = oneResult.getString("sectionName");
                 JSONArray tagsArray = oneResult.getJSONArray("tags");
@@ -72,7 +79,7 @@ public class NewsFetchTask extends AsyncTask<Void, Void, List<NewsDetails>> {
                         author += firstObject.getString("webTitle") + ". ";
                     }
                 }
-                listOfNews.add(new NewsDetails(title, author, section, date));
+                listOfNews.add(new NewsDetails(title, author, section, date, webUrl));
             }
         } catch (JSONException e) {
             Log.e(TAG, "Error parsing JSON response", e);
@@ -162,10 +169,4 @@ public class NewsFetchTask extends AsyncTask<Void, Void, List<NewsDetails>> {
         return output.toString();
     }
 
-    @Override
-    protected void onPostExecute(List<NewsDetails> bookList) {
-        if (resultCallBack != null) {
-            resultCallBack.onResult(bookList);
-        }
-    }
 }
