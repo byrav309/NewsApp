@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">News App</string>
+    <string name="menu_sync">Sync</string>
+    <string name="sync_error">Error in fetching News.</string>
+    <string name="sync_started">Sync Started</string>
+    <string name="sync_complete">Sync Completed</string>
+</resources>
